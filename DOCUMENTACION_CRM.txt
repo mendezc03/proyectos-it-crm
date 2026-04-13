@@ -1,0 +1,509 @@
+================================================================================
+                    CRM PROYECTOS-IT - DOCUMENTACIÓN COMPLETA
+================================================================================
+
+DESARROLLADO PARA: Proyectos-IT
+PROPÓSITO: Gestión de clientes, empleados, servidores, equipos, licencias y accesos
+FECHA: Abril 2026
+
+================================================================================
+                           ESTRUCTURA DEL PROYECTO
+================================================================================
+
+/proyectos-it-crm/
+├── prisma/
+│   └── schema.prisma          → Definición de la base de datos
+├── src/
+│   ├── app/
+│   │   ├── (dashboard)/       → Páginas protegidas (requieren login)
+│   │   │   ├── dashboard/     → Dashboard principal con gráficos
+│   │   │   ├── empresas/      → Lista de empresas
+│   │   │   ├── empresas/[id]/ → Detalle de empresa (todas las pestañas)
+│   │   │   └── usuarios/      → Gestión de usuarios admin
+│   │   ├── api/               → Endpoints de la API REST
+│   │   │   ├── auth/          → NextAuth (login/register)
+│   │   │   ├── empresas/      → CRUD empresas
+│   │   │   ├── empleados/     → CRUD empleados
+│   │   │   ├── correos/       → CRUD correos corporativos
+│   │   │   ├── servidores/    → CRUD servidores
+│   │   │   ├── equipos/       → CRUD equipos
+│   │   │   ├── licencias/     → CRUD licencias
+│   │   │   ├── accesos-web/   → CRUD accesos web
+│   │   │   ├── dominios/      → CRUD dominios
+│   │   │   └── usuarios/      → CRUD usuarios admin
+│   │   ├── login/             → Página de login
+│   │   └── register/          → Página de registro
+│   └── lib/
+│       ├── auth.ts            → Configuración NextAuth
+│       ├── prisma.ts          → Cliente Prisma
+│       └── encryption.ts       → Funciones de encriptación AES-256
+├── .env                       → Variables de entorno
+└── package.json               → Dependencias del proyecto
+
+================================================================================
+                          BASE DE DATOS
+================================================================================
+
+TIPO: SQLite (base de datos local)
+UBICACIÓN: /proyectos-it-crm/prisma/dev.db
+HERRAMIENTA ORM: Prisma
+
+MODELOS DE DATOS:
+
+1. User (Usuarios Administradores)
+   - id: string (ID único)
+   - email: string (único, usado para login)
+   - password: string (hasheada con bcrypt)
+   - name: string (opcional)
+   - createdAt: datetime
+
+2. Empresa (Clientes)
+   - id: string
+   - nombre: string
+   - rut: string (opcional)
+   - direccion: string (opcional)
+   - telefono: string (opcional)
+   - emailContacto: string (opcional)
+   - notas: string (opcional)
+   - Relaciones: empleados, correos, servidores, equipos, licencias, accesosWeb, dominios
+
+3. Empleado
+   - id, nombre, cargo, email, telefono, notas
+   - empresaId: relación con Empresa
+
+4. Correo (Correos Corporativos)
+   - id, email, password (encriptada), proveedor
+   - empresaId: relación con Empresa
+
+5. Servidor
+   - id, nombre, ip, tipo, usuario, password (encriptada), puerto, notas
+   - empresaId: relación con Empresa
+
+6. Equipo
+   - id, nombre, tipo, marca, modelo, serie, estado, ubicacion, notas
+   - empresaId: relación con Empresa
+
+7. Licencia
+   - id, nombre, tipo, clave, fechaInicio, fechaVenc, costo, notas
+   - empresaId: relación con Empresa
+
+8. AccesoWeb
+   - id, nombre, url, usuario, password (encriptada), notas
+   - empresaId: relación con Empresa
+
+9. Dominio
+   - id, nombre, url, fechaVenc, renovacion, proveedor, usuario, password (encriptada), dns1, dns2, notas
+   - empresaId: relación con Empresa
+
+================================================================================
+                       ACCESO A LA BASE DE DATOS
+================================================================================
+
+OPCIONES PARA ADMINISTRAR LA BASE DE DATOS:
+
+1. DBeaver (RECOMENDADO)
+   - Software gratuito de gestión de bases de datos
+   - Descarga: https://dbeaver.io/
+   - Soporta SQLite directamente
+   - Conexión: Archivo SQLite existente
+   - Ruta: /proyectos-it-crm/prisma/dev.db
+
+2. SQLite Browser
+   - Herramienta ligera para SQLite
+   - Descarga: https://sqlitebrowser.org/
+
+3. Línea de comandos SQLite
+   - Comando: sqlite3 dev.db
+   - Útil para consultas rápidas
+
+4. Prisma Studio (desarrollo)
+   - Comando: npx prisma studio
+   - Solo disponible en desarrollo local
+
+CONSULTAS ÚTILES SQL:
+
+-- Ver todas las empresas
+SELECT * FROM Empresa;
+
+-- Ver todos los usuarios
+SELECT id, email, name, createdAt FROM User;
+
+-- Ver total de registros por empresa
+SELECT e.nombre, 
+       COUNT(emp.id) as empleados,
+       COUNT(srv.id) as servidores
+FROM Empresa e
+LEFT JOIN Empleado emp ON emp.empresaId = e.id
+LEFT JOIN Servidor srv ON srv.empresaId = e.id
+GROUP BY e.id;
+
+-- Ver contraseñas encriptadas
+SELECT email, password FROM Correo LIMIT 5;
+
+-- Reiniciar base de datos
+DELETE FROM Dominio;
+DELETE FROM AccesoWeb;
+DELETE FROM Licencia;
+DELETE FROM Equipo;
+DELETE FROM Servidor;
+DELETE FROM Correo;
+DELETE FROM Empleado;
+DELETE FROM Empresa;
+DELETE FROM User;
+
+================================================================================
+                          ENCRIPTACIÓN
+================================================================================
+
+MÉTODO: AES-256-CBC
+ARCHIVO: /proyectos-it-crm/src/lib/encryption.ts
+
+- Contraseñas almacenadas encriptadas en la base de datos
+- Campos encriptados: password de Correo, Servidor, AccesoWeb, Dominio
+- La encriptación es transparente para el usuario (se descifran automáticamente al mostrar)
+
+================================================================================
+                          API REST ENDPOINTS
+================================================================================
+
+BASE URL: /api
+
+EMPRESAS
+  GET    /api/empresas              → Lista todas las empresas
+  POST   /api/empresas              → Crear empresa
+  GET    /api/empresas/[id]         → Obtener empresa con todos sus datos
+  PUT    /api/empresas/[id]         → Actualizar empresa
+  DELETE /api/empresas/[id]         → Eliminar empresa
+
+EMPLEADOS
+  GET    /api/empleados             → Lista empleados
+  POST   /api/empleados              → Crear empleado
+  PUT    /api/empleados/[id]        → Actualizar
+  DELETE /api/empleados/[id]        → Eliminar
+
+CORREOS
+  GET    /api/correos               → Lista correos
+  POST   /api/correos                → Crear (encripta password)
+  PUT    /api/correos/[id]           → Actualizar
+  DELETE /api/correos/[id]           → Eliminar
+
+SERVIDORES
+  GET    /api/servidores             → Lista servidores
+  POST   /api/servidores             → Crear (encripta password)
+  PUT    /api/servidores/[id]         → Actualizar
+  DELETE /api/servidores/[id]         → Eliminar
+
+EQUIPOS
+  GET    /api/equipos                → Lista equipos
+  POST   /api/equipos                 → Crear
+  PUT    /api/equipos/[id]            → Actualizar
+  DELETE /api/equipos/[id]            → Eliminar
+
+LICENCIAS
+  GET    /api/licencias              → Lista licencias
+  POST   /api/licencias               → Crear
+  PUT    /api/licencias/[id]          → Actualizar
+  DELETE /api/licencias/[id]          → Eliminar
+
+ACCESOS WEB
+  GET    /api/accesos-web            → Lista accesos
+  POST   /api/accesos-web             → Crear (encripta password)
+  PUT    /api/accesos-web/[id]        → Actualizar
+  DELETE /api/accesos-web/[id]        → Eliminar
+
+DOMINIOS
+  GET    /api/dominios                → Lista dominios
+  POST   /api/dominios                 → Crear (encripta password)
+  PUT    /api/dominios/[id]            → Actualizar
+  DELETE /api/dominios/[id]            → Eliminar
+
+USUARIOS
+  GET    /api/usuarios                → Lista usuarios admin
+  POST   /api/usuarios                → Crear usuario
+  PUT    /api/usuarios                → Actualizar (nombre, password)
+  DELETE /api/usuarios?id=[id]        → Eliminar usuario
+
+================================================================================
+                          VARIABLES DE ENTORNO
+================================================================================
+
+ARCHIVO: /proyectos-it-crm/.env
+
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=tu-secret-aqui-minimo-32-caracteres
+DATABASE_URL="file:./prisma/dev.db"
+
+PARA GENERAR UN NEXTAUTH_SECRET:
+  openssl rand -base64 32
+
+================================================================================
+                          COMANDOS PRINCIPALES
+================================================================================
+
+INSTALACIÓN (primera vez):
+  npm install
+  npx prisma generate
+  npx prisma db push
+
+DESARROLLO (localhost:3000):
+  npm run dev
+
+MIGRACIONES DB:
+  npx prisma migrate dev --name nombre_migracion
+  npx prisma db push (reinicia schema sin perder datos)
+
+RESETEAR BASE DE DATOS:
+  rm prisma/dev.db
+  npx prisma db push
+
+================================================================================
+                    MIGRACIÓN A SERVIDOR PRODUCCIÓN
+================================================================================
+
+OPCIONES DE HOSTING:
+
+1. VPS CON UBUNTU/DEBIAN (RECOMENDADO)
+   -------------------------------------------------
+   a) Servidor mínimo: 1GB RAM, 20GB disco
+   
+   b) Instalar Node.js 20:
+      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+      sudo apt-get install -y nodejs
+   
+   c) Instalar PM2 (gestor de procesos):
+      npm install -g pm2
+   
+   d) Clonar/subir el proyecto:
+      git clone [repo] /var/www/proyectos-it-crm
+      cd /var/www/proyectos-it-crm
+   
+   e) Instalar dependencias:
+      npm install --legacy-peer-deps
+   
+   f) Generar Prisma:
+      npx prisma generate
+      npx prisma db push
+   
+   g) Configurar variables de entorno:
+      nano .env
+      (cambiar NEXTAUTH_URL por el dominio)
+   
+   h) Crear archivo PM2:
+      pm2 start npm --name "proyectos-crm" -- start
+   
+   i) Configurar Nginx como proxy reverso:
+      sudo apt install nginx
+      sudo nano /etc/nginx/sites-available/proyectos-it
+      
+      server {
+          listen 80;
+          server_name tu-dominio.com;
+          
+          location / {
+              proxy_pass http://localhost:3000;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+          }
+      }
+      
+      sudo ln -s /etc/nginx/sites-available/proyectos-it /etc/nginx/sites-enabled/
+      sudo nginx -t
+      sudo systemctl restart nginx
+   
+   j) SSL con Let's Encrypt:
+      sudo apt install certbot python3-certbot-nginx
+      sudo certbot --nginx -d tu-dominio.com
+
+2. WEBMIN
+   -------------------------------------------------
+   Webmin es para administración del sistema, no para Node.js.
+   Pero puedes usarlo para:
+   - Gestionar usuarios del sistema
+   - Configurar Nginx
+   - Gestionar firewall (UFW)
+   - Monitorear recursos
+   - Gestionar base de datos SQLite
+
+   Instalación Webmin:
+   curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh
+   sudo sh setup-repos.sh
+   sudo apt-get install webmin
+
+   Acceso: https://tu-servidor:10000
+
+3. DOCKER (alternativa)
+   -------------------------------------------------
+   Crear Dockerfile en la raíz del proyecto:
+   
+   FROM node:20-alpine
+   WORKDIR /app
+   COPY package*.json ./
+   RUN npm install
+   COPY . .
+   RUN npx prisma generate
+   RUN npx prisma db push
+   EXPOSE 3000
+   CMD ["npm", "start"]
+
+================================================================================
+                          ACCESO REMOTO (VPN)
+================================================================================
+
+Según las instrucciones originales, el acceso es via VPN con OPNsense.
+
+CONFIGURACIÓN VPN OPNSENSE:
+1. Instalar OPNsense en un servidor/pfsense compatible
+2. Configurar OpenVPN o WireGuard
+3. Crear usuarios para cada técnico
+4. Distribuir archivos de configuración
+5. Conectar antes de acceder al CRM
+
+ACCESO LOCAL:
+- URL: http://localhost:3000 (desarrollo)
+- URL: http://[IP-SERVIDOR]:3000 (producción sin nginx)
+- URL: https://tu-dominio.com (producción con nginx+ssl)
+
+================================================================================
+                          CARACTERÍSTICAS IMPLEMENTADAS
+================================================================================
+
+AUTENTICACIÓN:
+- Login/Logout con NextAuth
+- Registro de usuarios
+- Contraseñas hasheadas con bcrypt
+- Sesiones persistentes
+
+GESTIÓN DE EMPRESAS:
+- CRUD completo de empresas
+- Vista detallada por empresa
+- Todas las pestañas: Info, Empleados, Correos, Servidores, Equipos, Licencias, Accesos Web, Dominios
+
+GESTIÓN DE USUARIOS:
+- Panel de administración de usuarios
+- Crear, editar, eliminar usuarios
+- Sin restricciones para administradores
+
+DASHBOARD:
+- Estadísticas generales
+- Gráfico de barras apiladas por empresa
+- Tabla resumen con breakdown
+
+CONEXIÓN VNC (Soporte Remoto):
+- Integrado en la pestaña de Equipos
+- Campos VNC en cada equipo: host, puerto, contraseña
+- Botón para conectar directamente desde el nombre del equipo
+- Modal de confirmación antes de conectar
+- Viewer VNC embebido en el navegador (noVNC)
+- Controles: Ctrl+Alt+Del, pantalla completa, desconectar
+- Contraseñas VNC encriptadas con AES-256
+
+SEGURIDAD:
+- Contraseñas encriptadas con AES-256
+- Credenciales ocultas por defecto
+- Opción de copiar al portapapeles
+- Indicadores de vencimiento de licencias
+
+================================================================================
+                          TECNOLOGÍAS USADAS
+================================================================================
+
+FRONTEND:
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- Recharts (gráficos)
+- noVNC (visor VNC en navegador)
+
+BACKEND:
+- Next.js API Routes
+- Prisma ORM
+- NextAuth v4
+
+BASE DE DATOS:
+- SQLite
+- AES-256 encryption
+
+OTROS:
+- bcryptjs (hashing)
+- nvm (gestión Node.js)
+- @novnc/novnc (VNC viewer)
+
+================================================================================
+                    CONEXIÓN VNC - GUÍA DE USO
+================================================================================
+
+El CRM incluye soporte para conexión VNC integrada en la pestaña de Equipos.
+Esto permite conectarse remotamente a los equipos de los clientes directamente 
+desde el navegador.
+
+CAMPOS VNC EN EQUIPOS:
+- vncHost: IP o nombre del equipo (ej: 192.168.1.100 o EQ0015)
+- vncPort: Puerto VNC (default: 5900)
+- vncPassword: Contraseña de acceso VNC (encriptada)
+
+CÓMO CONFIGURAR UN EQUIPO PARA VNC:
+
+1. En el equipo cliente (Windows):
+   - Instalar TightVNC Server
+   - Configurar una contraseña de acceso
+   - Asegurarse que el servicio esté corriendo
+   - Configurar el firewall para permitir conexiones al puerto 5900
+
+2. En el CRM:
+   - Ir a la empresa → pestaña Equipos
+   - Crear o editar un equipo
+   - Llenar los campos VNC:
+     * Host VNC: IP del equipo (ej: 192.168.1.100)
+     * Puerto VNC: 5900
+     * Contraseña VNC: la configurada en TightVNC
+
+3. Para conectarse:
+   - Hacer clic en el nombre del equipo (si tiene VNC configurado)
+   - O clic en el botón 🖥️ en la columna de acciones
+   - Aparecerá un modal de confirmación
+   - Clic en "Conectar" para abrir el viewer VNC
+
+REQUISITOS DE RED:
+- El servidor del CRM debe tener acceso a la red de los equipos clientes
+- Puede ser a través de VPN (OPNsense)
+- O los equipos deben tener IPs accesibles públicamente
+
+LIMITACIONES ACTUALES:
+- La conexión VNC directa requiere que el navegador pueda establecer
+  conexiones WebSocket a los equipos
+- Para producción, se recomienda usar websockify como proxy
+
+INSTALACIÓN DE WEBSOCKIFY (Producción):
+  # Ubuntu/Debian
+  sudo apt install websockify
+  
+  # O usar npm
+  npm install -g websockify
+  
+  # Ejecutar como proxy
+  websockify --web=/usr/share/novnc 6080 localhost:5900
+
+ACLARACIÓN IMPORTANTE:
+Para que la conexión VNC funcione completamente en un servidor de producción,
+necesitarás configurar un proxy WebSocket (websockify). En desarrollo local,
+la conexión directa puede funcionar si el equipo cliente está en la misma red.
+
+================================================================================
+                          CONTACTOS DE SOPORTE
+================================================================================
+
+Desarrollado para: Proyectos-IT
+Tecnicos autorizados: 5 ( según especificaciones )
+
+Para agregar técnicos:
+1. Iniciar sesión con cuenta admin
+2. Ir a Menú lateral → clic en usuario → "Gestionar Usuarios"
+3. Crear nuevo usuario
+
+================================================================================
+                               FIN DEL DOCUMENTO
+================================================================================

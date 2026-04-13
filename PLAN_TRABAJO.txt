@@ -1,0 +1,104 @@
+==========================================
+PLAN DE TRABAJO - CRM Proyectos-IT
+Fecha: 09/04/2026
+==========================================
+
+PENDIENTE:
+
+1. MÓDULOS NUEVOS PARA IMPLEMENTAR:
+
+   a) TICKETS DE SOPORTE (Prioridad alta)
+      - Crear modelo Ticket en Prisma
+      - Campos: titulo, descripcion, estado, prioridad, empresaId, tecnicoId, createdAt
+      - CRUD API
+      - UI para crear/ver tickets
+      - Estados: abierto, en_proceso, cerrado
+
+   b) BITÁCORA DE INCIDENTES
+      - Registro de incidentes por empresa
+      - Historial de soluciones
+
+   c) DOCUMENTOS
+      - Subir archivos (contratos, facturas)
+      - Organizados por empresa
+
+2. DESPLIEGUE EN NUBE (Gratuito):
+
+   Opción A: Vercel + Neon PostgreSQL
+   - Crear cuenta en vercel.com
+   - Crear cuenta en neon.tech (PostgreSQL gratis)
+   - Migrar de SQLite a PostgreSQL
+   - Cambiar prisma/schema.prisma:
+     provider = "postgresql"
+     url = env("DATABASE_URL")  # de Neon
+   
+   Opción B: Railway
+   - Crear cuenta en railway.app
+   - Conectar GitHub
+   - Crear proyecto PostgreSQL
+   - Deploy automático
+
+3. PASOS PARA MIGRAR A POSTGRESQL:
+
+   a) En package.json, agregar prisma/postgresql:
+      npm install @prisma/client pg
+      npm install prisma --save-dev
+   
+   b) Cambiar prisma/schema.prisma:
+      datasource db {
+        provider = "postgresql"
+        url      = env("DATABASE_URL")
+      }
+   
+   c) Crear archivo .env.production:
+      DATABASE_URL="postgresql://user:pass@host:5432/db"
+   
+   d) Ejecutar migración:
+      npx prisma db push
+      npx prisma generate
+
+4. DESPUÉS DEL DESPLIEGUE:
+   - Probar desde red externa
+   - Verificar que las contraseñas se encriptan
+   - Test de autenticación
+
+==========================================
+NOTAS:
+- No usar npm run build con Node 18 (requiere Node 20+)
+- Usar: nvm use 20 && npm run build
+- Servidor de desarrollo: npm run dev
+- Located at: /home/mendez/Documentos/estructura empresas/proyectos-it-crm
+==========================================
+
+==========================================
+RESUMEN DEL PROYECTO
+==========================================
+
+Lo que se hizo:
+
+1. CRM Core completado:
+   - Next.js 16 + TypeScript + Tailwind CSS + Prisma + SQLite
+   - Autenticación con NextAuth (login/register)
+   - CRUD APIs para: Empresas, Empleados, Correos, Servidores, 
+     Equipos, Licencias, AccesosWeb, Dominios
+   - Encriptación AES-256 para contraseñas
+   - Dashboard con gráficos
+   - UI completa: Login, Register, Dashboard, Empresas list, 
+     Empresa detail con tabs
+
+2. Intentamos VNC embebido (NO funcionó):
+   - Bundle de noVNC con webpack
+   - Múltiples intentos de cargar RFB en el navegador
+   - Problema: TightVNC con Tight encoding no renderizaba imagen
+   - DECISIÓN: Eliminar VNC embebido
+
+3. Limpieza final:
+   - Eliminados todos los archivos VNC
+   - Eliminados campos vncHost, vncPort, vncPassword del modelo Equipo
+   - Base de datos actualizada
+
+Estado actual:
+- CRM funcional en http://localhost:3000
+- Empresas registradas: Learning System Inc SAS, Xhability SAS
+- Datos de prueba cargados
+- Node.js 20+ requerido para build

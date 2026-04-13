@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Empresa {
+  id            String   @id @default(cuid())
+  nombre        String
+  rut           String?
+  direccion     String?
+  telefono      String?
+  emailContacto String?
+  notas         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  empleados       Empleado[]
+  correos         Correo[]
+  servidores      Servidor[]
+  equipos         Equipo[]
+  licencias       Licencia[]
+  accesosWeb      AccesoWeb[]
+  dominios        Dominio[]
+}
+
+model Dominio {
+  id            String   @id @default(cuid())
+  nombre        String
+  url           String
+  fechaVenc     DateTime?
+  renovacion     String?   // anual, semestral, trimestral, mensual
+  proveedor     String?
+  usuario       String?
+  password      String?
+  dns1          String?   // Nameserver 1
+  dns2          String?   // Nameserver 2
+  notas         String?
+  empresaId     String
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Empleado {
+  id        String   @id @default(cuid())
+  nombre    String
+  cargo     String?
+  email     String?
+  telefono  String?
+  notas     String?
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Correo {
+  id           String @id @default(cuid())
+  email        String
+  password     String
+  proveedor    String?
+  empresaId    String
+  empresa      Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Servidor {
+  id          String   @id @default(cuid())
+  nombre      String
+  ip          String?
+  tipo        String?
+  usuario     String?
+  password    String?
+  puerto      Int?
+  notas       String?
+  empresaId   String
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Equipo {
+  id           String   @id @default(cuid())
+  nombre       String
+  tipo         String?
+  marca        String?
+  modelo       String?
+  serie        String?
+  estado       String   @default("activo")
+  ubicacion    String?
+  notas        String?
+  empresaId    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Licencia {
+  id          String    @id @default(cuid())
+  nombre      String
+  tipo        String?
+  clave       String?
+  fechaInicio DateTime?
+  fechaVenc   DateTime?
+  costo       Float?
+  notas       String?
+  empresaId   String
+  empresa     Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AccesoWeb {
+  id           String   @id @default(cuid())
+  nombre       String
+  url          String
+  usuario      String?
+  password     String?
+  notas        String?
+  empresaId    String
+  empresa      Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
